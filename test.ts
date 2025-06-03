@@ -20,4 +20,5 @@ const LED_TOOL_DEF: McpTool = {
     }
 };
 
-mcp.startServer([LED_TOOL_DEF])
+mcp.startServer()
+mcp.tool(LED_TOOL_DEF)

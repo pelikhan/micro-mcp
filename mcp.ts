@@ -1,4 +1,7 @@
-interface McpTool {
+// https://modelcontextprotocol.io/specification/2025-03-26/basic
+type McpToolHandler = (args: { [index: string]: any; }) => string
+
+interface McpToolDefinition {
     name: string
     description: string
     inputSchema: {
@@ -6,31 +9,122 @@ interface McpTool {
         properties: { [index: string]: any; }
         required: string[]
     }
-    handler: (args: { [index: string]: any; }) => string
 }
-interface McpRequest {
-    jsonrpc: "2.0"
-    id: string
-    method: "initialize" | "tools/list" | "tools/call"
+
+interface McpTool extends McpToolDefinition {
+    handler: McpToolHandler
+}
+
+interface McpError {
+    code: number;
+    message: string;
+    data?: any;
+}
+
+interface McpMessage {
+    jsonrpc: "2.0",
+}
+
+interface McpRequest extends McpMessage {
+    id: string | number;
+    method: string;
+    params?: {
+        [key: string]: any;
+    };
+}
+
+interface McpResponse extends McpMessage {
+    id: string | number;
+    result?: {
+        [key: string]: any;
+    }
+    error?: McpError
+}
+
+interface McpNotification extends McpMessage {
+    method: string;
+    params?: {
+        [key: string]: any;
+    };
 }
 
 interface McpToolInitializeRequest extends McpRequest {
     method: "initialize"
+    params: {
+        protocolVersion: string
+        capabilities: {
+            tools?: {
+                supported: boolean
+                inputSchemaVersion?: string
+            }
+        }
+        clientInfo?: {
+            name: string
+            version: string
+        }
+    }
+}
+
+interface McpToolInitializeResponse extends McpResponse {
+    method: "initialize"
+    result: {
+        protocolVersion: string
+        capabilities: {
+            logging?: {}
+            prompts?: {
+                listChanged: boolean
+            }
+            resources?: {
+                subscribe: boolean
+                listChanged: boolean
+            }
+            tools?: {
+                listChanged: boolean
+            }
+        }
+        serverInfo?: {
+            name: string
+            version: string
+        },
+        instructions?: string
+    }
+}
+
+interface McpToolsListResponse extends McpResponse {
+    result: {
+        tools: McpToolDefinition[]
+    }
 }
 
 interface McpToolCallRequest extends McpRequest {
     method: "tools/call"
-    params: {
+    params?: {
         name: string
         args: { [index: string]: any }
     }
 }
 
+interface McpToolCallResponse extends McpResponse {
+    result: {
+        content: { type: "text", text?: string }[]
+        isError: boolean
+    }
+}
+
+enum McpErrorCode {
+    ParseError = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams = -32602,
+    InternalError = -32603
+}
+
 namespace mcp {
     const _tools: McpTool[] = []
-    let started = false
+    let _started = false
+    let _instructions: string
 
-    function send(msg: any) {
+    function send(msg: McpResponse | McpNotification) {
         serial.writeLine(JSON.stringify(msg));
     }
 
@@ -41,24 +135,20 @@ namespace mcp {
     /**
      * Registers a tool in the MCP server
      */
-    export function registerTools(ts: McpTool[]) {
-        if (!ts || !ts.length) return
-
-        let changed = false
-        for (const t of ts) {
-            if (!findTool(t.name)) {
-                _tools.push(t)
-                changed = true
-            }
-        }
-        if (changed)
-            notifyToolsListChanged()
+    export function tool(ts: McpTool) {
+        const existing = _tools.find(t => t.name === ts.name);
+        if (existing)
+            _tools[_tools.indexOf(existing)] = ts; // update existing tool
+        else
+            _tools.push(ts); // add new tool
+        notifyToolsListChanged()
     }
 
     /**
      * Starts a MCP server with the given tools
      */
-    export function startServer(ts?: McpTool[]) {
+    export function startServer(instructions?: string) {
+        _instructions = instructions
         serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
             const raw = serial.readLine().trim();
             if (!raw) return;
@@ -91,12 +181,11 @@ namespace mcp {
             }
         });
 
-        started = true
-        registerTools(ts)
+        _started = true
     }
 
     function notifyToolsListChanged() {
-        if (!started) return
+        if (!_started) return
         send({
             jsonrpc: "2.0",
             method: "notifications/tools/list_changed"
@@ -104,22 +193,29 @@ namespace mcp {
     }
 
     function handleInitialize(req: McpToolInitializeRequest) {
-        send({
+        const res: McpToolInitializeResponse = {
             jsonrpc: "2.0",
+            method: "initialize",
             id: req.id,
             result: {
+                protocolVersion: "2025-03-26",
                 capabilities: {
                     tools: {
-                        supported: true,
-                        inputSchemaVersion: "1.0"
+                        listChanged: true,
                     }
-                }
+                },
+                serverInfo: {
+                    name: "BBC micro:bit",
+                    version: "1.0.0"
+                },
+                instructions: _instructions
             }
-        });
+        }
+        send(res);
     }
 
     function handleToolsList(req: McpRequest) {
-        send({
+        const res: McpToolsListResponse = {
             jsonrpc: "2.0",
             id: req.id,
             result: {
@@ -127,9 +223,10 @@ namespace mcp {
                     name: t.name,
                     description: t.description,
                     inputSchema: t.inputSchema
-                }))
+                } as McpToolDefinition))
             }
-        });
+        }
+        send(res);
     }
 
     function handleToolCall(req: McpToolCallRequest) {
@@ -149,10 +246,11 @@ namespace mcp {
             content.push({ type: "text", text: "" + e })
             isError = true
         }
-        send({
+        const res: McpToolCallResponse = {
             jsonrpc: "2.0",
             id: req.id,
             result: { content, isError },
-        });
+        }
+        send(res);
     }
 }
