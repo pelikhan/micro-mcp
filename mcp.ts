@@ -37,6 +37,8 @@ namespace mcp {
      * Registers a tool in the MCP server
      */
     export function registerTools(ts: McpTool[]) {
+        if (!ts || !ts.length) return
+        
         let changed = false
         for (const t of ts) {
             if (!findTool(t.name)) {
@@ -51,7 +53,7 @@ namespace mcp {
     /**
      * Starts a MCP server with the given tools
      */
-    export function startServer() {
+    export function startServer(ts?: McpTool[]) {
         serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
             const raw = serial.readLine().trim();
             if (!raw) return;
@@ -81,7 +83,7 @@ namespace mcp {
         });
 
         started = true
-        notifyToolsListChanged()
+        registerTools(ts)
     }
 
     function notifyToolsListChanged() {
