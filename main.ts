@@ -14,7 +14,6 @@ const LED_TOOL_DEF: McpTool = {
         const x = args.x || 0;
         const y = args.y || 0;
         const on = !!args.on;
-        const ok = x >= 0 && x <= 4 && y >= 0 && y <= 4;
         if (on) led.plot(x, y);
         else led.unplot(x, y);
         return `(${x}, ${y}) is ${on ? `on` : `off`}`
