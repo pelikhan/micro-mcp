@@ -22,10 +22,30 @@ interface McpToolCallRequest extends McpRequest {
 }
 
 namespace mcp {
-    const tools: McpTool[] = []
+    const _tools: McpTool[] = []
+    let started = false
 
     function send(msg: any) {
         serial.writeLine(JSON.stringify(msg));
+    }
+
+    function findTool(name: string): McpTool {
+        return _tools.find(t => t.name === name)
+    }
+
+    /**
+     * Registers a tool in the MCP server
+     */
+    export function registerTools(ts: McpTool[]) {
+        let changed = false
+        for (const t of ts) {
+            if (!findTool(t.name)) {
+                _tools.push(t)
+                changed = true
+            }
+        }
+        if (changed)
+            notifyToolsListChanged()
     }
 
     /**
@@ -60,10 +80,12 @@ namespace mcp {
             }
         });
 
+        started = true
         notifyToolsListChanged()
     }
 
     function notifyToolsListChanged() {
+        if (!started) return
         send({
             jsonrpc: "2.0",
             method: "notifications/tools/list_changed"
@@ -75,7 +97,7 @@ namespace mcp {
             jsonrpc: "2.0",
             id: req.id,
             result: {
-                tools: tools.map(t => ({
+                tools: _tools.map(t => ({
                     name: t.name,
                     description: t.description,
                     inputSchema: t.inputSchema
@@ -91,7 +113,7 @@ namespace mcp {
             if (!req.params) throw "missing params"
 
             const { name, args } = req.params
-            const tool = tools.find(t => t.name === name)
+            const tool = findTool(name)
             if (!tool) throw "tool not found"
 
             const text = tool.handler(args)
