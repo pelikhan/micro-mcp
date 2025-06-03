@@ -1,0 +1,9 @@
+{
+    "servers": {
+        "micro-mcp": {
+            "type": "stdio",
+            "command": "node",
+            "args": ["${workspaceFolder}/bridge.mjs"]
+        }
+    }
+}

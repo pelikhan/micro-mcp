@@ -11,8 +11,13 @@ interface McpTool {
 interface McpRequest {
     jsonrpc: "2.0"
     id: string
-    method: "tools/list" | "tools/call"
+    method: "initialize" | "tools/list" | "tools/call"
 }
+
+interface McpToolInitializeRequest extends McpRequest {
+    method: "initialize"
+}
+
 interface McpToolCallRequest extends McpRequest {
     method: "tools/call"
     params: {
@@ -71,6 +76,10 @@ namespace mcp {
 
             // find tool to run
             switch (req.method) {
+                case "initialize": {
+                    handleInitialize(req as McpToolInitializeRequest);
+                    break
+                }
                 case "tools/list": {
                     handleToolsList(req)
                     break;
@@ -92,6 +101,10 @@ namespace mcp {
             jsonrpc: "2.0",
             method: "notifications/tools/list_changed"
         });
+    }
+
+    function handleInitialize(req: McpToolInitializeRequest) {
+        //initialize
     }
 
     function handleToolsList(req: McpRequest) {
