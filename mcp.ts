@@ -43,7 +43,7 @@ namespace mcp {
      */
     export function registerTools(ts: McpTool[]) {
         if (!ts || !ts.length) return
-        
+
         let changed = false
         for (const t of ts) {
             if (!findTool(t.name)) {
@@ -104,7 +104,18 @@ namespace mcp {
     }
 
     function handleInitialize(req: McpToolInitializeRequest) {
-        //initialize
+        send({
+            jsonrpc: "2.0",
+            id: req.id,
+            result: {
+                capabilities: {
+                    tools: {
+                        supported: true,
+                        inputSchemaVersion: "1.0"
+                    }
+                }
+            }
+        });
     }
 
     function handleToolsList(req: McpRequest) {
