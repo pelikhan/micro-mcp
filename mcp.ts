@@ -123,6 +123,7 @@ namespace mcp {
     const _tools: McpTool[] = []
     let _started = false
     let _instructions: string
+    let ledStatus = true
 
     function send(msg: McpResponse | McpNotification) {
         serial.writeLine(JSON.stringify(msg));
@@ -148,40 +149,61 @@ namespace mcp {
      * Starts a MCP server with the given tools
      */
     export function startServer(instructions?: string) {
+        if (ledStatus) led.plot(0, 0)
         _instructions = instructions
         serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
-            const raw = serial.readLine().trim();
+            if (ledStatus) led.toggle(0, 1)
+            const raw = serial.readString()
+            if (ledStatus) led.toggle(1, 1)
             if (!raw) return;
+            if (ledStatus) led.toggle(2, 1)
 
-            let req: McpRequest;
+            let req: McpRequest | McpNotification;
             try {
-                req = JSON.parse(raw);
+                req = { "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2025-03-26", "capabilities": { "roots": { "listChanged": true } }, "clientInfo": { "name": "Visual Studio Code", "version": "1.100.2" } } }// JSON.parse(raw);
             } catch {
-                // malformed JSON – ignore
+                led.toggle(0, 4)
                 return;
             }
+            if (ledStatus) led.toggle(3, 1)
 
             // Validate JSON-RPC envelope
-            if (!req || req.jsonrpc !== "2.0" || typeof req.id === "undefined") return;
+            if (!req || req.jsonrpc !== "2.0" || typeof req.id === "undefined") {
+                led.toggle(1, 4)
+                return;
+            }
+            if (ledStatus) led.toggle(4, 1)
 
             // find tool to run
             switch (req.method) {
                 case "initialize": {
+                    if (ledStatus) led.plot(1, 0)
                     handleInitialize(req as McpToolInitializeRequest);
                     break
                 }
+                case "notifications/initialized": {
+                    if (ledStatus) led.plot(2, 2)
+                    break
+                }
                 case "tools/list": {
+                    if (ledStatus) led.plot(2, 0)
                     handleToolsList(req)
                     break;
                 }
                 case "tools/call": {
+                    if (ledStatus) led.toggle(3, 0)
                     handleToolCall(req as McpToolCallRequest)
+                    break
+                }
+                default: {
+                    led.toggle(4, 0)
                     break
                 }
             }
         });
 
         _started = true
+        notifyToolsListChanged()
     }
 
     function notifyToolsListChanged() {
@@ -208,8 +230,10 @@ namespace mcp {
                     name: "BBC micro:bit",
                     version: "1.0.0"
                 },
-                instructions: _instructions
             }
+        }
+        if (_instructions) {
+            res.result.instructions = _instructions;
         }
         send(res);
     }
