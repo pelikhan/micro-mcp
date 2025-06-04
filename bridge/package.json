@@ -1,0 +1,15 @@
+{
+    "type": "module",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.12.1",
+        "@types/debug": "^4.1.12",
+        "@types/serialport": "^8.0.5",
+        "debug": "^4.4.1",
+        "serialport": "^13.0.0",
+        "tsx": "^4.19.4",
+        "typescript": "^5.8.3"
+    },
+    "scripts": {
+        "build": "tsc"
+    }
+}
