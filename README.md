@@ -1,10 +1,12 @@
 # micro-mcp
-## Turn your BBC micro:bit into a Model Context Protocol (MCP) server
-
-**WIP**
+## Turn your BBC micro:bit into a [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server
 
 With this library, you will be able to define MCP tools in TypeScript (blocks not yet)
 and use the bridge script to connect to a MCP client via stdio.
+
+## Example
+
+This example shows how to define a tool that displays a number on the micro:bit's LED matrix.
 
 ```ts
 mcp.tool({
@@ -32,6 +34,9 @@ mcp.tool({
 mcp.startServer()
 ```
 
+
+
+
 ## Use as Extension
 
 This repository can be added as an **extension** in MakeCode.
@@ -48,4 +53,3 @@ Use Visual Studio Code to edit this project.
 #### Metadata (used for search, rendering)
 
 * for PXT/microbit
-<script src="https://makecode.com/gh-pages-embed.js"></script><script>makeCodeRender("{{ site.makecode.home_url }}", "{{ site.github.owner_name }}/{{ site.github.repository_name }}");</script>
