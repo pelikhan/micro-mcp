@@ -21,21 +21,39 @@ const ledTool: McpTool = {
         return `(${x}, ${y}) is ${on ? `on` : `off`}`
     }
 };
+const readTemperature: McpTool = {
+    definition: {
+        name: "read_temperature",
+        description: "Read the temperature from the micro:bit's built-in sensor",
+        inputSchema: {
+            type: "object",
+            properties: {},
+            required: []
+        },
+        annotations: {
+            title: "Read Temperature",
+            readOnlyHint: true,
+            idempotentHint: true,
+        }
+    },
+    handler: () => {
+        return input.temperature() // Simulated temperature reading
+    }
+};
 const showNumberTool: McpTool = {
     definition: {
         name: "show_number",
-        description: "Show a number on the 5×5 LED matrix",
+        description: "Show a number on the 5 x 5 LED matrix",
         inputSchema: {
             type: "object",
             properties: {
-                number: { type: "integer", description: "Number to show (0-9)" }
+                number: { type: "integer", description: "Integer to show" }
             },
             required: ["number"]
         },
         annotations: {
             title: "Show Number",
             idempotentHint: true,
-            readOnlyHint: true,
         }
     },
     handler: (args: { number: number }) => {
@@ -45,6 +63,6 @@ const showNumberTool: McpTool = {
     }
 };
 
-mcp.startServer()
-//mcp.tool(ledTool)
+mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. You can show numbers, and read the temperature.")
 mcp.tool(showNumberTool)
+mcp.tool(readTemperature)

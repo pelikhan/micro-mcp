@@ -1,5 +1,5 @@
 // https://modelcontextprotocol.io/specification/2025-03-26/basic
-type McpToolHandler = (args: { [index: string]: any; }) => string
+type McpToolHandler = (args: { [index: string]: any; }) => string | number
 
 interface McpToolDefinition {
     name: string
@@ -306,7 +306,8 @@ namespace mcp {
             const tool = findTool(name)
             if (!tool) throw "tool not found"
 
-            const text = tool.handler(arguments) || ""
+            const res = tool.handler(arguments) || ""
+            const text = typeof res === "string" ? res : "" + res
             content.push({ type: "text", text })
             isError = false
         } catch (e) {
