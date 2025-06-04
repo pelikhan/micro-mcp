@@ -3,7 +3,7 @@
         "micro-mcp": {
             "type": "stdio",
             "command": "node",
-            "args": ["${workspaceFolder}/bridge/main.js"],
+            "args": ["${workspaceFolder}/bridge.mjs"],
             "env": {
                 "DEBUG": "micro:*"
             }
