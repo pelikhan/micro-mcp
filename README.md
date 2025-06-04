@@ -1,6 +1,8 @@
 # micro-mcp
 ## Turn your BBC micro:bit into a [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) server
 
+![ChatGPT Image Jun 4, 2025, 02_22_06 PM](https://github.com/user-attachments/assets/b1445cad-2a9a-4dfd-be80-551c72399be4)
+
 With this library, you will be able to define MCP tools in TypeScript (blocks not yet)
 and use the bridge script to connect to a MCP client via stdio.
 
