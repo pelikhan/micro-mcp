@@ -8,10 +8,18 @@ interface McpToolDefinition {
         type: "object",
         properties: { [index: string]: any; }
         required: string[]
+    },
+    annotations?: {
+        title?: string;      // Human-readable title for the tool
+        readOnlyHint?: boolean;    // If true, the tool does not modify its environment
+        destructiveHint?: boolean; // If true, the tool may perform destructive updates
+        idempotentHint?: boolean;  // If true, repeated calls with same args have no additional effect
+        openWorldHint?: boolean;   // If true, tool interacts with external entities
     }
 }
 
-interface McpTool extends McpToolDefinition {
+interface McpTool {
+    definition: McpToolDefinition
     handler: McpToolHandler
 }
 
@@ -133,14 +141,14 @@ namespace mcp {
     }
 
     function findTool(name: string): McpTool {
-        return _tools.find(t => t.name === name)
+        return _tools.find(t => t.definition.name === name)
     }
 
     /**
      * Registers a tool in the MCP server
      */
     export function tool(ts: McpTool) {
-        const existing = _tools.find(t => t.name === ts.name);
+        const existing = findTool(ts.definition.name);
         if (existing)
             _tools[_tools.indexOf(existing)] = ts; // update existing tool
         else
@@ -278,11 +286,7 @@ namespace mcp {
             jsonrpc: "2.0",
             id: req.id,
             result: {
-                tools: _tools.map(t => ({
-                    name: t.name,
-                    description: t.description,
-                    inputSchema: t.inputSchema
-                } as McpToolDefinition))
+                tools: _tools.map(t => t.definition)
             }
         }
         send(res);
