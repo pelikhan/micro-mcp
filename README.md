@@ -12,11 +12,7 @@ This repository can be added as an **extension** in MakeCode.
 
 ## Edit this project
 
-To edit this repository in MakeCode.
-
-* open [https://makecode.microbit.org/](https://makecode.microbit.org/)
-* click on **Import** then click on **Import URL**
-* paste **https://github.com/pelikhan/micro-mcp** and click import
+Use Visual Studio Code to edit this project.
 
 #### Metadata (used for search, rendering)
 
