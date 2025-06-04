@@ -48,7 +48,7 @@ async function main() {
 
     process.stdin.on("data", data => {
         console.error(
-            `${pending ? `caching ` : ``}${data
+            `${pending ? ` caching ` : `📤 `}${data
                 .toString("utf8")
                 .replace(/\n/g, "")}`
         )
@@ -68,7 +68,7 @@ async function main() {
             pending = undefined
             for (const data of p) {
                 console.error(
-                    `sending ${data.toString("utf8").replace(/\n/g, "")}`
+                    `📤 sending ${data.toString("utf8").replace(/\n/g, "")}`
                 )
                 port.write(data)
             }

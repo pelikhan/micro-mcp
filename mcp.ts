@@ -66,7 +66,6 @@ interface McpToolInitializeRequest extends McpRequest {
 }
 
 interface McpToolInitializeResponse extends McpResponse {
-    method: "initialize"
     result: {
         protocolVersion: string
         capabilities: {
@@ -88,6 +87,10 @@ interface McpToolInitializeResponse extends McpResponse {
         },
         instructions?: string
     }
+}
+
+interface McpToolsListRequest extends McpRequest {
+    method: "tools/list"
 }
 
 interface McpToolsListResponse extends McpResponse {
@@ -151,7 +154,10 @@ namespace mcp {
     export function startServer(instructions?: string) {
         if (ledStatus) led.plot(0, 0)
         _instructions = instructions
-        serial.onDataReceived(serial.delimiters(Delimiters.NewLine), () => {
+        serial.setRxBufferSize(128);
+        serial.setTxBufferSize(128);
+        const newLine = serial.delimiters(Delimiters.NewLine)
+        serial.onDataReceived(newLine, () => {
             if (ledStatus) led.toggle(0, 1)
             const raw = serial.readString()
             if (ledStatus) led.toggle(1, 1)
@@ -160,16 +166,35 @@ namespace mcp {
 
             let req: McpRequest | McpNotification;
             try {
-                req = { "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": { "protocolVersion": "2025-03-26", "capabilities": { "roots": { "listChanged": true } }, "clientInfo": { "name": "Visual Studio Code", "version": "1.100.2" } } }// JSON.parse(raw);
+                if (raw.indexOf("\"method\":\"initialize\"") > 0)
+                    req = { method: "initialize", jsonrpc: "2.0", id: 1 } as McpToolInitializeRequest;
+                else
+                    req = JSON.parse(raw) as any
             } catch {
                 led.toggle(0, 4)
+                send({
+                    jsonrpc: "2.0",
+                    id: 1,
+                    error: {
+                        code: McpErrorCode.ParseError,
+                        message: "Invalid JSON format"
+                    }
+                })
                 return;
             }
             if (ledStatus) led.toggle(3, 1)
 
             // Validate JSON-RPC envelope
-            if (!req || req.jsonrpc !== "2.0" || typeof req.id === "undefined") {
+            if (!req) {
                 led.toggle(1, 4)
+                send({
+                    jsonrpc: "2.0",
+                    id: 1,
+                    error: {
+                        code: McpErrorCode.InvalidRequest,
+                        message: "Invalid JSON-RPC envelope"
+                    }
+                })
                 return;
             }
             if (ledStatus) led.toggle(4, 1)
@@ -182,28 +207,27 @@ namespace mcp {
                     break
                 }
                 case "notifications/initialized": {
-                    if (ledStatus) led.plot(2, 2)
+                    if (ledStatus) led.plot(2, 0)
                     break
                 }
                 case "tools/list": {
-                    if (ledStatus) led.plot(2, 0)
-                    handleToolsList(req)
+                    if (ledStatus) led.plot(3, 0)
+                    handleToolsList(req as McpToolsListRequest);
                     break;
                 }
                 case "tools/call": {
-                    if (ledStatus) led.toggle(3, 0)
+                    if (ledStatus) led.toggle(4, 0)
                     handleToolCall(req as McpToolCallRequest)
                     break
                 }
                 default: {
-                    led.toggle(4, 0)
+                    led.toggle(2, 4)
                     break
                 }
             }
         });
 
         _started = true
-        notifyToolsListChanged()
     }
 
     function notifyToolsListChanged() {
@@ -217,7 +241,6 @@ namespace mcp {
     function handleInitialize(req: McpToolInitializeRequest) {
         const res: McpToolInitializeResponse = {
             jsonrpc: "2.0",
-            method: "initialize",
             id: req.id,
             result: {
                 protocolVersion: "2025-03-26",
