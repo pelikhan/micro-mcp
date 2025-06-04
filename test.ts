@@ -62,7 +62,17 @@ const showNumberTool: McpTool = {
         return `ok`;
     }
 };
+const temperatureResource: McpResource = {
+    definition: {
+        uri: "temperature",
+        name: "temperature",
+        description: "The current temperature in degrees Celsius",
+    },
+    handler: () => input.temperature()
+}
 
-mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. It is located outside of the building. You can show numbers, and read the temperature using tools.")
+mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. It is located outside of the building. You can show numbers, turn on LEDs, and read the temperature using tools.")
 mcp.tool(showNumberTool)
 mcp.tool(readTemperature)
+mcp.tool(ledTool)
+mcp.resource(temperatureResource)
