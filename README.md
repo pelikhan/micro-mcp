@@ -34,8 +34,28 @@ mcp.tool({
 mcp.startServer()
 ```
 
+## Visual Studio Code
 
+To test out the MCP server, you can use the `bridge` script in this repository.
 
+- create a `.vscode/mcp.json` file in the root of this repository with the following content:
+
+```json
+{
+    "servers": {
+        "micro-mcp": {
+            "type": "stdio",
+            "command": "node",
+            "args": ["${workspaceFolder}/bridge.mjs"]
+        }
+    }
+}
+```
+
+- open GitHub Copilot Chat
+- open the `mcp.json` file and start the server
+- click on the `Tools` icon and make sure your tool are listed and selected
+- prompt away!
 
 ## Use as Extension
 
