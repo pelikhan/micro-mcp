@@ -306,7 +306,7 @@ namespace mcp {
             const tool = findTool(name)
             if (!tool) throw "tool not found"
 
-            const res = tool.handler(arguments) || ""
+            const res = tool.handler(arguments)
             const text = typeof res === "string" ? res : "" + res
             content.push({ type: "text", text })
             isError = false
