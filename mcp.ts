@@ -402,7 +402,7 @@ namespace mcp {
             const resource = findResource(req.params.uri)
             if (!resource) throw "resource not found"
 
-            const res = resource.handler() || ""
+            const res = resource.handler()
             const text = typeof res === "string" ? res : "" + res
             content.push({ uri: req.params.uri, text })
         } catch (e) {
@@ -426,7 +426,7 @@ namespace mcp {
             const tool = findTool(name)
             if (!tool) throw "tool not found"
 
-            const res = tool.handler(arguments) || ""
+            const res = tool.handler(arguments)
             const text = typeof res === "string" ? res : "" + res
             content.push({ type: "text", text })
             isError = false
