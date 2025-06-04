@@ -134,7 +134,7 @@ namespace mcp {
     const _tools: McpTool[] = []
     let _started = false
     let _instructions: string
-    let ledStatus = true
+    let ledStatus = false
 
     function send(msg: McpResponse | McpNotification) {
         serial.writeLine(JSON.stringify(msg));

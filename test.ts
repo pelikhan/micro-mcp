@@ -32,6 +32,11 @@ const showNumberTool: McpTool = {
             },
             required: ["number"]
         },
+        annotations: {
+            title: "Show Number",
+            idempotentHint: true,
+            readOnlyHint: true,
+        }
     },
     handler: (args: { number: number }) => {
         const number = args.number || 0;
