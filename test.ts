@@ -41,5 +41,5 @@ const showNumberTool: McpTool = {
 };
 
 mcp.startServer()
-mcp.tool(ledTool)
+//mcp.tool(ledTool)
 mcp.tool(showNumberTool)
