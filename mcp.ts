@@ -231,12 +231,11 @@ namespace mcp {
                 }
                 case "tools/call": {
                     ledToggle(4, 0)
-                    console.log(msg)
                     handleToolCall(req as McpToolCallRequest)
                     break
                 }
                 default: {
-                    ledToggle(2, 4)
+                    console.log(`unknown method: ` + req.method)
                     break
                 }
             }
