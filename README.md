@@ -1,5 +1,36 @@
+# micro-mcp
+## Turn your BBC micro:bit into a Model Context Protocol (MCP) server
 
-> Open this page at [https://pelikhan.github.io/micro-mcp/](https://pelikhan.github.io/micro-mcp/)
+**WIP**
+
+With this library, you will be able to define MCP tools in TypeScript (blocks not yet)
+and use the bridge script to connect to a MCP client via stdio.
+
+```ts
+mcp.tool({
+    definition: {
+        name: "show_number",
+        description: "Show a number on the 5 x 5 LED matrix",
+        inputSchema: {
+            type: "object",
+            properties: {
+                number: { type: "integer", description: "Integer to show" }
+            },
+            required: ["number"]
+        },
+        annotations: {
+            title: "Show Number",
+            idempotentHint: true,
+        }
+    },
+    handler: (args: { number: number }) => {
+        const number = args.number || 0;
+        basic.showNumber(number);
+        return `ok`;
+    }
+})
+mcp.startServer()
+```
 
 ## Use as Extension
 

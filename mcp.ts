@@ -1,5 +1,5 @@
 // https://modelcontextprotocol.io/specification/2025-03-26/basic
-type McpToolHandler = (args: { [index: string]: any; }) => string
+type McpToolHandler = (args: { [index: string]: any; }) => string | number
 
 interface McpToolDefinition {
     name: string
@@ -8,10 +8,18 @@ interface McpToolDefinition {
         type: "object",
         properties: { [index: string]: any; }
         required: string[]
+    },
+    annotations?: {
+        title?: string;      // Human-readable title for the tool
+        readOnlyHint?: boolean;    // If true, the tool does not modify its environment
+        destructiveHint?: boolean; // If true, the tool may perform destructive updates
+        idempotentHint?: boolean;  // If true, repeated calls with same args have no additional effect
+        openWorldHint?: boolean;   // If true, tool interacts with external entities
     }
 }
 
-interface McpTool extends McpToolDefinition {
+interface McpTool {
+    definition: McpToolDefinition
     handler: McpToolHandler
 }
 
@@ -34,7 +42,7 @@ interface McpRequest extends McpMessage {
 }
 
 interface McpResponse extends McpMessage {
-    id: string | number;
+    id?: string | number;
     result?: {
         [key: string]: any;
     }
@@ -103,7 +111,7 @@ interface McpToolCallRequest extends McpRequest {
     method: "tools/call"
     params?: {
         name: string
-        args: { [index: string]: any }
+        arguments: { [index: string]: any }
     }
 }
 
@@ -126,21 +134,21 @@ namespace mcp {
     const _tools: McpTool[] = []
     let _started = false
     let _instructions: string
-    let ledStatus = true
+    let ledStatus = false
 
     function send(msg: McpResponse | McpNotification) {
         serial.writeLine(JSON.stringify(msg));
     }
 
     function findTool(name: string): McpTool {
-        return _tools.find(t => t.name === name)
+        return _tools.find(t => t.definition.name === name)
     }
 
     /**
      * Registers a tool in the MCP server
      */
     export function tool(ts: McpTool) {
-        const existing = _tools.find(t => t.name === ts.name);
+        const existing = findTool(ts.definition.name);
         if (existing)
             _tools[_tools.indexOf(existing)] = ts; // update existing tool
         else
@@ -152,82 +160,98 @@ namespace mcp {
      * Starts a MCP server with the given tools
      */
     export function startServer(instructions?: string) {
-        if (ledStatus) led.plot(0, 0)
+        if (_started) return
+        ledPlot(0, 0)
         _instructions = instructions
-        serial.setRxBufferSize(128);
-        serial.setTxBufferSize(128);
-        const newLine = serial.delimiters(Delimiters.NewLine)
-        serial.onDataReceived(newLine, () => {
-            if (ledStatus) led.toggle(0, 1)
-            const raw = serial.readString()
-            if (ledStatus) led.toggle(1, 1)
-            if (!raw) return;
-            if (ledStatus) led.toggle(2, 1)
+        _started = true
+        control.runInBackground(() => serverReadLoop())
+    }
 
+    function ledPlot(x: number, y: number) {
+        if (ledStatus) led.plot(x, y)
+    }
+
+    function ledToggle(x: number, y: number) {
+        if (ledStatus) led.toggle(x, y)
+    }
+
+    function serverReadLoop() {
+        serial.setRxBufferSize(128)
+        serial.setTxBufferSize(128)
+        let current = ""
+        while (true) {
+            basic.pause(0)
+            ledToggle(0, 1)
+            const received = serial.readString()
+            ledToggle(1, 1)
+            if (received !== "")
+                current = current + received
+            if (!current || !current.includes("\n")) {
+                ledToggle(2, 1)
+                continue
+            }
+
+            ledToggle(3, 1)
             let req: McpRequest | McpNotification;
             try {
-                if (raw.indexOf("\"method\":\"initialize\"") > 0)
-                    req = { method: "initialize", jsonrpc: "2.0", id: 1 } as McpToolInitializeRequest;
-                else
-                    req = JSON.parse(raw) as any
+                req = JSON.parse(current)
+                ledToggle(4, 1)
             } catch {
-                led.toggle(0, 4)
-                send({
-                    jsonrpc: "2.0",
-                    id: 1,
-                    error: {
-                        code: McpErrorCode.ParseError,
-                        message: "Invalid JSON format"
-                    }
-                })
-                return;
+                ledToggle(0, 4)
+                continue;
             }
-            if (ledStatus) led.toggle(3, 1)
+            current = ""; // reset for next message
 
             // Validate JSON-RPC envelope
-            if (!req) {
-                led.toggle(1, 4)
+            if (req === undefined) {
+                ledPlot(1, 4)
                 send({
                     jsonrpc: "2.0",
-                    id: 1,
                     error: {
                         code: McpErrorCode.InvalidRequest,
                         message: "Invalid JSON-RPC envelope"
                     }
                 })
-                return;
+                continue;
             }
-            if (ledStatus) led.toggle(4, 1)
 
             // find tool to run
             switch (req.method) {
                 case "initialize": {
-                    if (ledStatus) led.plot(1, 0)
+                    ledPlot(1, 0)
                     handleInitialize(req as McpToolInitializeRequest);
                     break
                 }
                 case "notifications/initialized": {
-                    if (ledStatus) led.plot(2, 0)
+                    ledPlot(1, 2)
+                    break
+                }
+                case "notifications/cancelled": {
+                    ledToggle(4, 2)
                     break
                 }
                 case "tools/list": {
-                    if (ledStatus) led.plot(3, 0)
+                    ledPlot(3, 0)
                     handleToolsList(req as McpToolsListRequest);
                     break;
                 }
                 case "tools/call": {
-                    if (ledStatus) led.toggle(4, 0)
+                    ledToggle(4, 0)
                     handleToolCall(req as McpToolCallRequest)
                     break
                 }
                 default: {
-                    led.toggle(2, 4)
+                    send({
+                        jsonrpc: "2.0",
+                        error: {
+                            code: McpErrorCode.MethodNotFound,
+                            message: `Method not found: ${req.method}`
+                        }
+                    })
                     break
                 }
             }
-        });
-
-        _started = true
+        }
     }
 
     function notifyToolsListChanged() {
@@ -266,11 +290,7 @@ namespace mcp {
             jsonrpc: "2.0",
             id: req.id,
             result: {
-                tools: _tools.map(t => ({
-                    name: t.name,
-                    description: t.description,
-                    inputSchema: t.inputSchema
-                } as McpToolDefinition))
+                tools: _tools.map(t => t.definition)
             }
         }
         send(res);
@@ -282,11 +302,12 @@ namespace mcp {
         try {
             if (!req.params) throw "missing params"
 
-            const { name, args } = req.params
+            const { name, arguments } = req.params
             const tool = findTool(name)
             if (!tool) throw "tool not found"
 
-            const text = tool.handler(args)
+            const res = tool.handler(arguments) || ""
+            const text = typeof res === "string" ? res : "" + res
             content.push({ type: "text", text })
             isError = false
         } catch (e) {
