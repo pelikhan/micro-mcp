@@ -3,13 +3,11 @@ import { SerialPort } from "serialport"
 import process from "node:process"
 import { promisify } from "node:util"
 
-const MICROBIT_VENDOR_ID = "0d28"
-const KNOWN_PRODUCT_IDS = ["0204", "0209"]
-const KNOWN_MANUFACTURERS = ["mbed", "arm", "microbit"]
-
 async function findMicrobitPort() {
     const ports = await SerialPort.list()
-
+    const MICROBIT_VENDOR_ID = "0d28"
+    const KNOWN_PRODUCT_IDS = ["0204", "0209"]
+    const KNOWN_MANUFACTURERS = ["mbed", "arm", "microbit"]
     const match = ports.find(port => {
         return (
             port.vendorId?.toLowerCase() === MICROBIT_VENDOR_ID &&
@@ -29,14 +27,12 @@ async function findMicrobitPort() {
 }
 
 async function main() {
-    const path = await findMicrobitPort()
-    const baudRate = 115200
-
+    const portPath = await findMicrobitPort()
     let pending = []
 
     const port = new SerialPort({
-        path,
-        baudRate,
+        path: portPath,
+        baudRate: 115200,
     })
 
     const drain = promisify(cb => port.drain(cb))
@@ -67,7 +63,7 @@ async function main() {
     })
 
     port.on("open", async () => {
-        console.error(`✅ micro:bit connected: ${path} @ ${baudRate} baud`)
+        console.error(`✅ micro:bit connected: ${portPath}`)
         if (pending) {
             const ps = pending
             pending = undefined

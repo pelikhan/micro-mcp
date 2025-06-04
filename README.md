@@ -6,6 +6,7 @@
 With this library, you will be able to define MCP tools in TypeScript (blocks not yet)
 and use the bridge script to connect to a MCP client via stdio.
 
+
 ## Example
 
 This example shows how to define a tool that displays a number on the micro:bit's LED matrix.

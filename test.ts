@@ -63,6 +63,6 @@ const showNumberTool: McpTool = {
     }
 };
 
-mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. You can show numbers, and read the temperature.")
+mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. It is located outside of the building. You can show numbers, and read the temperature using tools.")
 mcp.tool(showNumberTool)
 mcp.tool(readTemperature)
