@@ -34,7 +34,7 @@ interface McpRequest extends McpMessage {
 }
 
 interface McpResponse extends McpMessage {
-    id: string | number;
+    id?: string | number;
     result?: {
         [key: string]: any;
     }
@@ -103,7 +103,7 @@ interface McpToolCallRequest extends McpRequest {
     method: "tools/call"
     params?: {
         name: string
-        args: { [index: string]: any }
+        arguments: { [index: string]: any }
     }
 }
 
@@ -152,82 +152,95 @@ namespace mcp {
      * Starts a MCP server with the given tools
      */
     export function startServer(instructions?: string) {
-        if (ledStatus) led.plot(0, 0)
+        if (_started) return
+        ledPlot(0, 0)
         _instructions = instructions
-        serial.setRxBufferSize(128);
-        serial.setTxBufferSize(128);
-        const newLine = serial.delimiters(Delimiters.NewLine)
-        serial.onDataReceived(newLine, () => {
-            if (ledStatus) led.toggle(0, 1)
-            const raw = serial.readString()
-            if (ledStatus) led.toggle(1, 1)
-            if (!raw) return;
-            if (ledStatus) led.toggle(2, 1)
+        _started = true
+        control.runInBackground(() => serverReadLoop())
+    }
 
+    function ledPlot(x: number, y: number) {
+        if (ledStatus) led.plot(x, y)
+    }
+
+    function ledToggle(x: number, y: number) {
+        if (ledStatus) led.toggle(x, y)
+    }
+
+    function serverReadLoop() {
+        serial.setRxBufferSize(254);
+        serial.setTxBufferSize(254);
+        let current: string
+        while (true) {
+            basic.pause(50)
+            ledToggle(0, 1)
+            const received = serial.readString()
+            ledToggle(1, 1)
+            if (received === undefined || received === "") {
+                ledToggle(2, 1)
+                continue
+            }
+            current = current ? current + received : received
+            ledToggle(3, 1)
+
+            const index = current.indexOf("\n")
+            if (index < 0) continue
+
+            const msg = current.slice(0, index)
             let req: McpRequest | McpNotification;
             try {
-                if (raw.indexOf("\"method\":\"initialize\"") > 0)
-                    req = { method: "initialize", jsonrpc: "2.0", id: 1 } as McpToolInitializeRequest;
-                else
-                    req = JSON.parse(raw) as any
+                req = JSON.parse(msg)
             } catch {
-                led.toggle(0, 4)
-                send({
-                    jsonrpc: "2.0",
-                    id: 1,
-                    error: {
-                        code: McpErrorCode.ParseError,
-                        message: "Invalid JSON format"
-                    }
-                })
-                return;
+                continue;
             }
-            if (ledStatus) led.toggle(3, 1)
+            ledToggle(4, 1)
+            current = current.slice(index + 1)
 
             // Validate JSON-RPC envelope
-            if (!req) {
-                led.toggle(1, 4)
+            if (req === undefined || req.jsonrpc !== "2.0" || !req.method) {
+                ledPlot(1, 4)
                 send({
                     jsonrpc: "2.0",
-                    id: 1,
                     error: {
                         code: McpErrorCode.InvalidRequest,
                         message: "Invalid JSON-RPC envelope"
                     }
                 })
-                return;
+                continue;
             }
-            if (ledStatus) led.toggle(4, 1)
 
             // find tool to run
             switch (req.method) {
                 case "initialize": {
-                    if (ledStatus) led.plot(1, 0)
+                    ledPlot(1, 0)
                     handleInitialize(req as McpToolInitializeRequest);
                     break
                 }
                 case "notifications/initialized": {
-                    if (ledStatus) led.plot(2, 0)
+                    ledPlot(2, 0)
+                    break
+                }
+                case "notifications/cancelled": {
+                    ledToggle(3, 4)
                     break
                 }
                 case "tools/list": {
-                    if (ledStatus) led.plot(3, 0)
+                    ledPlot(3, 0)
                     handleToolsList(req as McpToolsListRequest);
                     break;
                 }
                 case "tools/call": {
-                    if (ledStatus) led.toggle(4, 0)
+                    ledToggle(4, 0)
+                    console.log(msg)
                     handleToolCall(req as McpToolCallRequest)
                     break
                 }
                 default: {
-                    led.toggle(2, 4)
+                    ledToggle(2, 4)
                     break
                 }
             }
-        });
-
-        _started = true
+        }
     }
 
     function notifyToolsListChanged() {
@@ -282,11 +295,11 @@ namespace mcp {
         try {
             if (!req.params) throw "missing params"
 
-            const { name, args } = req.params
+            const { name, arguments } = req.params
             const tool = findTool(name)
             if (!tool) throw "tool not found"
 
-            const text = tool.handler(args)
+            const text = tool.handler(arguments) || ""
             content.push({ type: "text", text })
             isError = false
         } catch (e) {

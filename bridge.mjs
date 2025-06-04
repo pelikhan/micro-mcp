@@ -44,39 +44,36 @@ async function main() {
     // Pipe stdin to serial input
     process.stdin.setRawMode?.(true) // Optional: raw mode for terminal
     process.stdin.resume()
-    process.stdin.pipe(port)
+
+    const send = data => {
+        if (pending) {
+            pending.push(data)
+        } else {
+            console.error(`send: ${data.toString()}`)
+            if (!port.write(data)) port.drain()
+        }
+    }
 
     process.stdin.on("data", data => {
-        console.error(
-            `${pending ? ` caching ` : `📤 `}${data
-                .toString("utf8")
-                .replace(/\n/g, "")}`
-        )
-        if (pending) pending.push(data)
-        else port.write(data)
         if (data.includes("\x03")) {
             // Ctrl+C
             console.log("\nExiting...")
             port.close(() => process.exit(0))
         }
+        send(data)
     })
 
     port.on("open", () => {
-        console.error(`✅ Serial port opened: ${path} @ ${baudRate} baud`)
+        console.error(`✅ micro:bit connected: ${path} @ ${baudRate} baud`)
         if (pending) {
-            const p = pending
+            const ps = pending
             pending = undefined
-            for (const data of p) {
-                console.error(
-                    `📤 sending ${data.toString("utf8").replace(/\n/g, "")}`
-                )
-                port.write(data)
-            }
+            for (const p of ps) send(p)
         }
     })
 
     port.on("error", err => {
-        console.error("❌ Serial port error:", err.message)
+        console.error("❌ micro:bit error:", err.message)
         process.exit(1)
     })
 }

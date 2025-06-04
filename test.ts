@@ -1,4 +1,4 @@
-const LED_TOOL_DEF: McpTool = {
+const ledTool: McpTool = {
     name: "led_set",
     description: "Turn a pixel on the 5×5 LED matrix on or off",
     inputSchema: {
@@ -19,6 +19,23 @@ const LED_TOOL_DEF: McpTool = {
         return `(${x}, ${y}) is ${on ? `on` : `off`}`
     }
 };
+const showNumberTool: McpTool = {
+    name: "show_number",
+    description: "Show a number on the 5×5 LED matrix",
+    inputSchema: {
+        type: "object",
+        properties: {
+            number: { type: "integer", description: "Number to show (0-9)" }
+        },
+        required: ["number"]
+    },
+    handler: (args: { number: number }) => {
+        const number = args.number || 0;
+        basic.showNumber(number);
+        return `ok`;
+    }
+};
 
 mcp.startServer()
-mcp.tool(LED_TOOL_DEF)
+mcp.tool(ledTool)
+mcp.tool(showNumberTool)
