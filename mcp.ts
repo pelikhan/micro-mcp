@@ -176,36 +176,34 @@ namespace mcp {
     }
 
     function serverReadLoop() {
-        serial.setRxBufferSize(254);
-        serial.setTxBufferSize(254);
-        let current: string
+        serial.setRxBufferSize(128)
+        serial.setTxBufferSize(128)
+        let current = ""
         while (true) {
-            basic.pause(50)
+            basic.pause(0)
             ledToggle(0, 1)
             const received = serial.readString()
             ledToggle(1, 1)
-            if (received === undefined || received === "") {
+            if (received !== "")
+                current = current + received
+            if (!current || !current.includes("\n")) {
                 ledToggle(2, 1)
                 continue
             }
-            current = current ? current + received : received
+
             ledToggle(3, 1)
-
-            const index = current.indexOf("\n")
-            if (index < 0) continue
-
-            const msg = current.slice(0, index)
             let req: McpRequest | McpNotification;
             try {
-                req = JSON.parse(msg)
+                req = JSON.parse(current)
+                ledToggle(4, 1)
             } catch {
+                ledToggle(0, 4)
                 continue;
             }
-            ledToggle(4, 1)
-            current = current.slice(index + 1)
+            current = ""; // reset for next message
 
             // Validate JSON-RPC envelope
-            if (req === undefined || req.jsonrpc !== "2.0" || !req.method) {
+            if (req === undefined) {
                 ledPlot(1, 4)
                 send({
                     jsonrpc: "2.0",
@@ -225,11 +223,11 @@ namespace mcp {
                     break
                 }
                 case "notifications/initialized": {
-                    ledPlot(2, 0)
+                    ledPlot(1, 2)
                     break
                 }
                 case "notifications/cancelled": {
-                    ledToggle(3, 4)
+                    ledToggle(4, 2)
                     break
                 }
                 case "tools/list": {
@@ -243,7 +241,13 @@ namespace mcp {
                     break
                 }
                 default: {
-                    console.log(`unknown method: ` + req.method)
+                    send({
+                        jsonrpc: "2.0",
+                        error: {
+                            code: McpErrorCode.MethodNotFound,
+                            message: `Method not found: ${req.method}`
+                        }
+                    })
                     break
                 }
             }
