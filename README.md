@@ -40,6 +40,11 @@ mcp.startServer()
 
 To test out the MCP server, you can use the `bridge` script in this repository.
 
+- install dependencies
+```sh
+npm ci
+```
+
 - create a `.vscode/mcp.json` file in the root of this repository with the following content:
 
 ```json
