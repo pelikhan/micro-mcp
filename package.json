@@ -2,8 +2,7 @@
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.12.1",
         "makecode": "^1.3.4",
-        "pxt": "^0.5.1",
-        "pxt-microbit": "^7.1.40",
+        "prettier": "^3.5.3",
         "serialport": "^13.0.0"
     },
     "scripts": {
@@ -11,6 +10,7 @@
         "mkc": "makecode",
         "build": "makecode build",
         "deploy": "makecode build --deploy",
-        "download": "makecode download"
+        "download": "makecode download",
+        "lint": "prettier *.ts --write"
     }
 }

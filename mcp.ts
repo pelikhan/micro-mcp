@@ -1,11 +1,11 @@
 // https://modelcontextprotocol.io/specification/2025-03-26/basic
 
 interface McpResourceDefinition {
-    uri: string;           // Unique identifier for the resource
-    name: string;          // Human-readable name
-    description?: string;  // Optional description
-    mimeType?: string;     // Optional MIME type
-    size?: number;         // Optional size in bytes
+    uri: string // Unique identifier for the resource
+    name: string // Human-readable name
+    description?: string // Optional description
+    mimeType?: string // Optional MIME type
+    size?: number // Optional size in bytes
 }
 
 interface McpResource {
@@ -17,20 +17,22 @@ interface McpToolDefinition {
     name: string
     description: string
     inputSchema: {
-        type: "object",
-        properties: { [index: string]: any; }
+        type: "object"
+        properties: { [index: string]: any }
         required: string[]
-    },
+    }
     annotations?: {
-        title?: string;      // Human-readable title for the tool
-        readOnlyHint?: boolean;    // If true, the tool does not modify its environment
-        destructiveHint?: boolean; // If true, the tool may perform destructive updates
-        idempotentHint?: boolean;  // If true, repeated calls with same args have no additional effect
-        openWorldHint?: boolean;   // If true, tool interacts with external entities
+        title?: string // Human-readable title for the tool
+        readOnlyHint?: boolean // If true, the tool does not modify its environment
+        destructiveHint?: boolean // If true, the tool may perform destructive updates
+        idempotentHint?: boolean // If true, repeated calls with same args have no additional effect
+        openWorldHint?: boolean // If true, tool interacts with external entities
     }
 }
 
-type McpToolHandler = (args: { [index: string]: any; }) => string | number | boolean
+type McpToolHandler = (args: {
+    [index: string]: any
+}) => string | number | boolean
 
 interface McpTool {
     definition: McpToolDefinition
@@ -38,36 +40,36 @@ interface McpTool {
 }
 
 interface McpError {
-    code: number;
-    message: string;
-    data?: any;
+    code: number
+    message: string
+    data?: any
 }
 
 interface McpMessage {
-    jsonrpc: "2.0",
+    jsonrpc: "2.0"
 }
 
 interface McpRequest extends McpMessage {
-    id: string | number;
-    method: string;
+    id: string | number
+    method: string
     params?: {
-        [key: string]: any;
-    };
+        [key: string]: any
+    }
 }
 
 interface McpResponse extends McpMessage {
-    id?: string | number;
+    id?: string | number
     result?: {
-        [key: string]: any;
+        [key: string]: any
     }
     error?: McpError
 }
 
 interface McpNotification extends McpMessage {
-    method: string;
+    method: string
     params?: {
-        [key: string]: any;
-    };
+        [key: string]: any
+    }
 }
 
 interface McpToolInitializeRequest extends McpRequest {
@@ -78,11 +80,11 @@ interface McpToolInitializeRequest extends McpRequest {
             tools?: {
                 supported: boolean
                 inputSchemaVersion?: string
-            },
+            }
             resources?: {
                 supported: boolean
                 inputSchemaVersion?: string
-            },
+            }
         }
         clientInfo?: {
             name: string
@@ -110,7 +112,7 @@ interface McpToolInitializeResponse extends McpResponse {
         serverInfo?: {
             name: string
             version: string
-        },
+        }
         instructions?: string
     }
 }
@@ -145,7 +147,7 @@ interface McpToolCallRequest extends McpRequest {
 
 interface McpToolCallResponse extends McpResponse {
     result: {
-        content: { type: "text", text?: string }[]
+        content: { type: "text"; text?: string }[]
         isError: boolean
     }
 }
@@ -160,9 +162,9 @@ interface McpResourceReadRequest extends McpRequest {
 interface McpResourceReadResponse extends McpResponse {
     result: {
         content: {
-            uri: string;        // The URI of the resource
-            mimeType?: string;  // Optional MIME type
-            text?: string;      // For text resources
+            uri: string // The URI of the resource
+            mimeType?: string // Optional MIME type
+            text?: string // For text resources
         }[]
     }
 }
@@ -172,7 +174,7 @@ enum McpErrorCode {
     InvalidRequest = -32600,
     MethodNotFound = -32601,
     InvalidParams = -32602,
-    InternalError = -32603
+    InternalError = -32603,
 }
 
 namespace mcp {
@@ -181,10 +183,9 @@ namespace mcp {
 
     let _started = false
     let _instructions: string
-    let ledStatus = false
 
     function send(msg: McpResponse | McpNotification) {
-        serial.writeLine(JSON.stringify(msg));
+        serial.writeLine(JSON.stringify(msg))
     }
 
     function findTool(name: string): McpTool {
@@ -199,25 +200,23 @@ namespace mcp {
      * Registers a tool in the MCP server
      */
     export function tool(ts: McpTool) {
-        const existing = findTool(ts.definition.name);
+        const existing = findTool(ts.definition.name)
         if (existing)
-            _tools[_tools.indexOf(existing)] = ts; // update existing tool
-        else
-            _tools.push(ts); // add new tool
+            _tools[_tools.indexOf(existing)] = ts // update existing tool
+        else _tools.push(ts) // add new tool
         notifyToolsListChanged()
     }
 
     /**
- * Registers a resource in the MCP server
- */
+     * Registers a resource in the MCP server
+     */
     export function resource(ts: McpResource) {
         if (!ts.definition.uri.includes("://"))
-            ts.definition.uri = "microbit://" + ts.definition.uri; // ensure URI starts with micro://
-        const existing = findResource(ts.definition.uri);
-        if (existing)
-            _resources[_resources.indexOf(existing)] = ts; // update existing resource
-        else
-            _resources.push(ts); // add new resource
+            ts.definition.uri = "microbit://" + ts.definition.uri // ensure URI starts with micro://
+        const existing = findResource(ts.definition.uri)
+        if (existing) _resources[_resources.indexOf(existing)] = ts
+        // update existing resource
+        else _resources.push(ts) // add new resource
         notifyResourcesListChanged()
     }
 
@@ -226,18 +225,9 @@ namespace mcp {
      */
     export function startServer(instructions?: string) {
         if (_started) return
-        ledPlot(0, 0)
         _instructions = instructions
         _started = true
         control.runInBackground(() => serverReadLoop())
-    }
-
-    function ledPlot(x: number, y: number) {
-        if (ledStatus) led.plot(x, y)
-    }
-
-    function ledToggle(x: number, y: number) {
-        if (ledStatus) led.toggle(x, y)
     }
 
     function serverReadLoop() {
@@ -246,83 +236,68 @@ namespace mcp {
         let current = ""
         while (true) {
             basic.pause(0)
-            ledToggle(0, 1)
             const received = serial.readString()
-            ledToggle(1, 1)
-            if (received !== "")
-                current = current + received
+            if (received !== "") current = current + received
             if (!current || !current.includes("\n")) {
-                ledToggle(2, 1)
                 continue
             }
 
-            ledToggle(3, 1)
-            let req: McpRequest | McpNotification;
+            let req: McpRequest | McpNotification
             try {
                 req = JSON.parse(current)
-                ledToggle(4, 1)
             } catch {
-                ledToggle(0, 4)
-                continue;
+                continue
             }
-            current = ""; // reset for next message
+            current = "" // reset for next message
 
             // Validate JSON-RPC envelope
             if (req === undefined) {
-                ledPlot(1, 4)
                 send({
                     jsonrpc: "2.0",
                     error: {
                         code: McpErrorCode.InvalidRequest,
-                        message: "Invalid JSON-RPC envelope"
-                    }
+                        message: "Invalid JSON-RPC envelope",
+                    },
                 })
-                continue;
+                continue
             }
 
             // find tool to run
             switch (req.method) {
                 case "initialize": {
-                    ledPlot(1, 0)
-                    handleInitialize(req as McpToolInitializeRequest);
+                    handleInitialize(req as McpToolInitializeRequest)
                     break
                 }
                 case "notifications/initialized": {
-                    ledPlot(1, 2)
                     notifyToolsListChanged()
                     break
                 }
                 case "notifications/cancelled": {
-                    ledToggle(4, 2)
                     break
                 }
                 case "tools/list": {
-                    ledPlot(3, 0)
-                    handleToolsList(req as McpToolsListRequest);
-                    break;
+                    handleToolsList(req as McpToolsListRequest)
+                    break
                 }
                 case "tools/call": {
-                    ledToggle(4, 0)
                     handleToolCall(req as McpToolCallRequest)
                     break
                 }
                 case "resources/list": {
-                    ledPlot(3, 2)
-                    handleResourcesList(req as McpResourcesListRequest);
-                    break;
+                    handleResourcesList(req as McpResourcesListRequest)
+                    break
                 }
                 case "resources/read": {
-                    ledToggle(4, 2)
-                    handleResourceRead(req as McpResourceReadRequest);
-                    break;
+                    handleResourceRead(req as McpResourceReadRequest)
+                    break
                 }
                 default: {
                     send({
                         jsonrpc: "2.0",
                         error: {
                             code: McpErrorCode.MethodNotFound,
-                            message: `Method not found: ${req.method}`
-                        }
+                            message: `Method not found: ${req.method}`,
+                        },
                     })
                     break
                 }
@@ -334,16 +309,16 @@ namespace mcp {
         if (!_started) return
         send({
             jsonrpc: "2.0",
-            method: "notifications/tools/list_changed"
-        });
+            method: "notifications/tools/list_changed",
+        })
     }
 
     function notifyResourcesListChanged() {
         if (!_started) return
         send({
             jsonrpc: "2.0",
-            method: "notifications/resources/list_changed"
-        });
+            method: "notifications/resources/list_changed",
+        })
     }
 
     function handleInitialize(req: McpToolInitializeRequest) {
@@ -359,18 +334,18 @@ namespace mcp {
                     resources: {
                         subscribe: false,
                         listChanged: true,
-                    }
+                    },
                 },
                 serverInfo: {
                     name: "BBC micro:bit",
-                    version: "1.0.0"
+                    version: "1.0.0",
                 },
-            }
+            },
         }
         if (_instructions) {
-            res.result.instructions = _instructions;
+            res.result.instructions = _instructions
         }
-        send(res);
+        send(res)
     }
 
     function handleToolsList(req: McpToolsListRequest) {
@@ -378,10 +353,10 @@ namespace mcp {
             jsonrpc: "2.0",
             id: req.id,
             result: {
-                tools: _tools.map(t => t.definition)
-            }
+                tools: _tools.map(t => t.definition),
+            },
         }
-        send(res);
+        send(res)
     }
 
     function handleResourcesList(req: McpResourcesListRequest) {
@@ -389,10 +364,10 @@ namespace mcp {
             jsonrpc: "2.0",
             id: req.id,
             result: {
-                resources: _resources.map(r => r.definition)
-            }
+                resources: _resources.map(r => r.definition),
+            },
         }
-        send(res);
+        send(res)
     }
 
     function handleResourceRead(req: McpResourceReadRequest) {
@@ -414,11 +389,11 @@ namespace mcp {
             id: req.id,
             result: { content },
         }
-        send(res);
+        send(res)
     }
 
     function handleToolCall(req: McpToolCallRequest) {
-        const content: { type: "text", text?: string }[] = []
+        const content: { type: "text"; text?: string }[] = []
         let isError: boolean
         try {
             if (!req.params) throw "missing params"
@@ -440,6 +415,6 @@ namespace mcp {
             id: req.id,
             result: { content, isError },
         }
-        send(res);
+        send(res)
     }
 }
