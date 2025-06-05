@@ -289,6 +289,7 @@ namespace mcp {
                 }
                 case "notifications/initialized": {
                     ledPlot(1, 2)
+                    notifyToolsListChanged()
                     break
                 }
                 case "notifications/cancelled": {

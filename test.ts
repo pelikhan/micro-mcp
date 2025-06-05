@@ -11,6 +11,10 @@ const ledTool: McpTool = {
             },
             required: ["x", "y", "on"]
         },
+        annotations: {
+            title: "Set LED",
+            idempotentHint: true,
+        }
     },
     handler: (args: { x: number; y: number; on: number }) => {
         const x = args.x || 0;
@@ -71,8 +75,8 @@ const temperatureResource: McpResource = {
     handler: () => input.temperature()
 }
 
-mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. It is located outside of the building. You can show numbers, turn on LEDs, and read the temperature using tools.")
+mcp.tool(ledTool)
 mcp.tool(showNumberTool)
 mcp.tool(readTemperature)
-mcp.tool(ledTool)
-mcp.resource(temperatureResource)
+//mcp.resource(temperatureResource)
+mcp.startServer("The micro:bit has a temperature sensor and a 5x5 LED matrix. It is located outside of the building. You can show numbers, turn on LEDs, and read the temperature using tools.")
